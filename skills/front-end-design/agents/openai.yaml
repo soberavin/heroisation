@@ -1,0 +1,5 @@
+interface:
+  display_name: "Front-End Design"
+  short_description: "Turn product goals into distinctive UI direction"
+  default_prompt: "Use $front-end-design to redesign this interface with a stronger visual system and cleaner hierarchy."
+
