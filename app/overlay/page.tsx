@@ -1,10 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useEffect, useState, type ReactNode } from "react";
 
 import { Badge } from "@/components/ui/badge";
-import { formatAmount, parseOverlayPayload, type Challenge, type OverlayPayload } from "@/lib/roulette";
+import {
+  formatAmount,
+  parseOverlayPayload,
+  type Challenge,
+  type OverlayPayload,
+} from "@/lib/roulette";
 
 const TICKER_THRESHOLD = 7;
 
@@ -55,30 +59,7 @@ function OverlayItem({
   );
 }
 
-export default function OverlayPage() {
-  const searchParams = useSearchParams();
-  const [payload, setPayload] = useState<OverlayPayload | null | undefined>(undefined);
-
-  useEffect(() => {
-    const readPayload = () => {
-      const queryData = searchParams.get("data");
-      const hashData =
-        typeof window !== "undefined" ? window.location.hash.replace(/^#/, "") : null;
-
-      setPayload(parseOverlayPayload(hashData || queryData));
-    };
-
-    readPayload();
-    window.addEventListener("hashchange", readPayload);
-
-    return () => {
-      window.removeEventListener("hashchange", readPayload);
-    };
-  }, [searchParams]);
-
-  const isTicker = Boolean(payload && payload.items.length > TICKER_THRESHOLD);
-  const tickerDuration = payload ? Math.max(28, payload.items.length * 4) : 28;
-
+function OverlayChrome({ children }: { children: ReactNode }) {
   return (
     <>
       <style>{`
@@ -102,7 +83,41 @@ export default function OverlayPage() {
           }
         }
       `}</style>
+      {children}
+    </>
+  );
+}
 
+function readOverlayPayloadFromLocation() {
+  const queryData = new URLSearchParams(window.location.search).get("data");
+  const hashData = window.location.hash.replace(/^#/, "");
+
+  return parseOverlayPayload(hashData || queryData);
+}
+
+export default function OverlayPage() {
+  const [payload, setPayload] = useState<OverlayPayload | null | undefined>(undefined);
+
+  useEffect(() => {
+    const readPayload = () => {
+      setPayload(readOverlayPayloadFromLocation());
+    };
+
+    readPayload();
+    window.addEventListener("hashchange", readPayload);
+    window.addEventListener("popstate", readPayload);
+
+    return () => {
+      window.removeEventListener("hashchange", readPayload);
+      window.removeEventListener("popstate", readPayload);
+    };
+  }, []);
+
+  const isTicker = Boolean(payload && payload.items.length > TICKER_THRESHOLD);
+  const tickerDuration = payload ? Math.max(28, payload.items.length * 4) : 28;
+
+  return (
+    <OverlayChrome>
       {payload === undefined ? (
         <main className="h-screen w-screen overflow-hidden bg-transparent" />
       ) : !payload || payload.items.length === 0 ? (
@@ -167,6 +182,6 @@ export default function OverlayPage() {
           </section>
         </main>
       )}
-    </>
+    </OverlayChrome>
   );
 }
